@@ -47,11 +47,11 @@ def run_model_on_input_and_get_triplet_loss(model, batch_size, cdr3_train_data, 
     return loss
 
 def train_model(model, num_epochs, batch_size,  x_train, x_train_labels, x_test, x_test_labels, loss_func):
-    steps = int(50)
+    steps = int(10000)
     optimizer = torch.optim.Adam(model.parameters(), lr=10e-5)
     batch_size = 128
-    eval_every_x_steps = 10
-    output_every_x_steps = 10
+    eval_every_x_steps = 100
+    output_every_x_steps = 100
 
     losses = []
     test_losses = []
