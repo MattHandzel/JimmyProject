@@ -6,16 +6,18 @@ from sklearn.model_selection import train_test_split
 from transformers import BertTokenizer
 import torch
 import matplotlib.pyplot as plt
-
+import time
+import pickle
 from transformers import *
 from dataloader import *
 from model import *
+from early_stopper import EarlyStopper
+import pickle
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     positives = pd.read_csv("./positive.csv")
     negatives = pd.read_csv("./negative.csv")
-
     amino_acids = extract_amino_acids(positives)
 
     amino_acid_label_encoder = LabelEncoder()
@@ -93,45 +95,70 @@ if __name__ == "__main__":
     loss_func = torch.nn.TripletMarginLoss(
         margin=1.0, p=2.0, eps=1e-06, swap=False, reduction="mean"
     )
-    config = BertConfig(
-        hidden_size=16,
-        hidden_act="gelu",
-        initializer_range=0.02,
-        vocab_size=25,
-        hidden_dropout_prob=0.1,
-        num_attention_heads=8,
-        type_vocab_size=2,
-        max_position_embeddings=32,
-        num_hidden_layers=2,
-        intermediate_size=16,
-        attention_probs_dropout_prob=0.1,
-    )
-    model = build_model(config)
 
-    num_params = sum(p.numel() for p in model.parameters())
-    print(f"Total Parameters: {num_params}")
+    attention_heads = [4, 8, 16]
+    hidden_sizes = [32, 64, 128]
+    num_hidden_layers = [2, 4, 8]
+    intermediate_sizes = [32, 64, 128]
+    i = 0
+    epochs = 1000
+    batch_size = 32
 
-    print("\nModel's architecture:")
-    print(model)
-    print("Training the model...")
-    loss_dict = train_model(
-        model,
-        1,
-        32,
-        cdr3_train_data,
-        cdr3_labels_train_data,
-        cdr3_test_data,
-        cdr3_labels_test_data,
-        loss_func,
-    )
-    print("Done training the model")
-
-    plt.plot(loss_dict["train_loss"], label="train")
-    plt.savefig("train_loss.png")
-    plt.show()
-    plt.plot(loss_dict["test_loss"], label="test")
-    plt.savefig("loss.png")
-
-    plt.show()
-    print("Saving the model...")
-    model.save_pretrained("./model")
+    # flatten configs
+    for hidden_size in hidden_sizes:
+        for num_hidden_layer in num_hidden_layers:
+            for num_attention_heads in attention_heads:
+                for intermediate_size in intermediate_sizes:
+                    config = BertConfig(
+                        hidden_size=hidden_size,
+                        hidden_act="gelu",
+                        initializer_range=0.02,
+                        vocab_size=25,
+                        hidden_dropout_prob=0.1,
+                        num_attention_heads=num_attention_heads,
+                        type_vocab_size=2,
+                        max_position_embeddings=32,
+                        num_hidden_layers=num_hidden_layer,
+                        intermediate_size=intermediate_size,
+                        attention_probs_dropout_prob=0.1,
+                    )
+                    early_stopper = EarlyStopper(
+                        patience=100, min_delta=0, val_data_min_delta=0.001
+                    )
+                    model_save_path = f"./runs/model_hidden_size_{hidden_size}_num_hidden_layer_{num_hidden_layer}_intermediate_size_{intermediate_size}_num_attention_heads_{num_attention_heads}"
+                    model = build_model(config)
+                    # num_params = sum(p.numel() for p in model.parameters())
+                    # print(f"Total Parameters: {num_params}")
+                    #
+                    # print("\nModel's architecture:")
+                    # print(model)
+                    # print("Training the model...")
+                    print(
+                        "Using config: ",
+                        i,
+                        "out of ",
+                        len(attention_heads)
+                        * len(hidden_sizes)
+                        * len(num_hidden_layers)
+                        * len(intermediate_sizes),
+                    )
+                    s_t = time.time()
+                    loss_dict = train_model(
+                        model,
+                        epochs,
+                        batch_size,
+                        cdr3_train_data,
+                        cdr3_labels_train_data,
+                        cdr3_test_data,
+                        cdr3_labels_test_data,
+                        loss_func,
+                        early_stopper,
+                        save_every_x_epochs=10,
+                        model_save_path=model_save_path,
+                    )
+                    print(
+                        "it took ",
+                        round(time.time() - s_t),
+                        "seconds to train the model",
+                    )
+                    i += 1
