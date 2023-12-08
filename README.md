@@ -1,12 +1,17 @@
 # T-Cell Receptor Antigen
 
-We are trying to predict the binding interactions between T-Cell receptors and their binding-partners. Specifically in the immune system.
+Machine learning models to predict the binding interactions between the antibodies on T-cell receptors (TCRs) and their corresponding protien binding partners (epitopes). 
 
 ## Contributors
 
-Yuan, Jimmy
-Bauer, Mark
+Yuan, Jimmy<br>
+Bauer, Mark<br>
+Arana, Ceejay<br>
+Date, Nikhil,<br>
+Handzel, Matt<br>
+Tangudu, Nehal
+
 
 ## Application
 
-Predicting possible vaccine targets
+Applications for such predictions can aid in the development immunotherapies, i.e. therapies that incorporates of a person's own immune system to better target diseases   
